@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+"use client";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { ShieldCheck, Users, AlertTriangle, FileText, Activity, Trash2, Ban, LogOut, Loader2 } from "lucide-react";
