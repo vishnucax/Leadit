@@ -1,4 +1,4 @@
-export type PostType = 'text' | 'image' | 'confession' | 'story' | 'meme' | 'event';
+export type PostType = 'text' | 'image' | 'confession' | 'story' | 'meme' | 'event' | 'admin';
 
 export type Post = {
   id: string;
@@ -6,7 +6,6 @@ export type Post = {
   type: PostType;
   content: string;
   image_url?: string;
-  category: string;
   visitor_id: string;
   upvotes: number;
   downvotes: number;

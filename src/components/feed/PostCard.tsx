@@ -1,136 +1,246 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Heart, MessageSquare, Share2, MoreHorizontal, AlertTriangle, User, Pin } from "lucide-react";
+import {
+  ArrowUp, ArrowDown, MessageSquare, Share2, MoreHorizontal,
+  AlertTriangle, Pin, Megaphone, Calendar, Image as ImageIcon
+} from "lucide-react";
 import { Post } from "@/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { useVisitor } from "@/hooks/useVisitor";
 
 interface PostCardProps {
   post: Post;
+  onDelete?: (id: string) => void;
 }
 
-export function PostCard({ post }: PostCardProps) {
-  const [hasUpvoted, setHasUpvoted] = useState(false);
-  const [upvotes, setUpvotes] = useState(post.upvotes);
+const TYPE_BADGE: Record<string, { label: string; cls: string }> = {
+  confession: { label: "Confession", cls: "bg-purple-50 text-purple-700 border-purple-200" },
+  meme:       { label: "Meme",       cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  story:      { label: "Story",      cls: "bg-rose-50 text-rose-700 border-rose-200" },
+  event:      { label: "Event",      cls: "bg-blue-50 text-blue-700 border-blue-200" },
+  admin:      { label: "Admin",      cls: "bg-primary/10 text-primary border-primary/20" },
+};
 
-  const handleUpvote = () => {
-    if (hasUpvoted) {
-      setUpvotes((prev) => prev - 1);
-      setHasUpvoted(false);
+export function PostCard({ post, onDelete }: PostCardProps) {
+  const { visitorId } = useVisitor();
+  const [upvotes, setUpvotes] = useState(post.upvotes);
+  const [downvotes, setDownvotes] = useState(post.downvotes);
+  const [voted, setVoted] = useState<1 | -1 | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [reporting, setReporting] = useState(false);
+
+  const badge = TYPE_BADGE[post.type];
+
+  const handleVote = useCallback(async (type: 1 | -1) => {
+    if (!visitorId) { toast.error("Please wait…"); return; }
+
+    // Optimistic update
+    const prev = voted;
+    if (voted === type) {
+      setVoted(null);
+      type === 1 ? setUpvotes(v => v - 1) : setDownvotes(v => v - 1);
     } else {
-      setUpvotes((prev) => prev + 1);
-      setHasUpvoted(true);
+      if (prev) prev === 1 ? setUpvotes(v => v - 1) : setDownvotes(v => v - 1);
+      setVoted(type);
+      type === 1 ? setUpvotes(v => v + 1) : setDownvotes(v => v + 1);
+    }
+
+    try {
+      const res = await fetch("/api/votes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: post.id, visitor_id: visitorId, vote_type: type }),
+      });
+      if (!res.ok) throw new Error("Vote failed");
+    } catch {
+      // Rollback
+      setVoted(prev);
+      setUpvotes(post.upvotes);
+      setDownvotes(post.downvotes);
+      toast.error("Failed to vote");
+    }
+  }, [visitorId, voted, post.id, post.upvotes, post.downvotes]);
+
+  const handleReport = async () => {
+    setReporting(true);
+    setShowMenu(false);
+    try {
+      await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post_id: post.id, reason: "Reported by user" }),
+      });
+      toast.success("Report submitted. Thank you.");
+    } catch {
+      toast.error("Failed to report");
+    } finally {
+      setReporting(false);
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      "Placement Tea": "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-      "Love Stories": "bg-rose-500/10 text-rose-400 border-rose-500/20",
-      "Memes": "bg-amber-500/10 text-amber-400 border-amber-500/20",
-      "Confessions": "bg-purple-500/10 text-purple-400 border-purple-500/20",
-    };
-    return colors[category] || "bg-primary/10 text-primary border-primary/20";
+  const handleShare = async () => {
+    const url = `${window.location.origin}/posts/${post.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied!");
+      }
+    } catch { /* ignore */ }
   };
 
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="group glass-card overflow-hidden hover:border-white/20 transition-all duration-300"
-    >
-      <div className="p-5">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/10">
-              <User className="w-5 h-5 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">Anonymous</span>
-                {post.is_admin_post && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-primary-foreground uppercase tracking-wider">Admin</span>
-                )}
-                <span className="text-muted-foreground text-sm">•</span>
-                <span className="text-muted-foreground text-xs">{formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}</span>
-              </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium border", getCategoryColor(post.category))}>
-                  {post.category}
-                </span>
-                {post.is_pinned && (
-                  <span className="flex items-center gap-1 text-[10px] font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
-                    <Pin className="w-3 h-3" /> Pinned
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+  const isEvent = post.type === "event";
 
-          <DropdownMenu>
-            <DropdownMenuTrigger className="opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:bg-white/10 rounded-full outline-none">
-              <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 border-white/10 bg-[#1a1a24]/90 backdrop-blur-xl">
-              <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-400/10 cursor-pointer">
-                <AlertTriangle className="w-4 h-4 mr-2" /> Report
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18 }}
+      className={cn(
+        "surface-card p-4 md:p-5 group relative",
+        post.is_pinned && "ring-1 ring-amber-300 bg-amber-50/30",
+        isEvent && "ring-1 ring-blue-200 bg-blue-50/20",
+        post.is_admin_post && !isEvent && "ring-1 ring-primary/20 bg-primary/[0.02]"
+      )}
+    >
+      {/* Admin / Pinned ribbon */}
+      {post.is_pinned && (
+        <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+          <Pin className="w-3 h-3" /> Pinned
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-start gap-3 mb-3">
+        {/* Avatar */}
+        <div className={cn(
+          "w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-extrabold border",
+          post.is_admin_post
+            ? "bg-primary text-white border-primary/30"
+            : "bg-slate-100 text-slate-500 border-slate-200"
+        )}>
+          {post.is_admin_post ? <Megaphone className="w-4 h-4" /> : "A"}
         </div>
 
-        {/* Content */}
-        <div className="mb-4">
-          <p className="text-sm md:text-base leading-relaxed text-gray-200 whitespace-pre-wrap">
-            {post.content}
-          </p>
-          {post.image_url && (
-            <div className="mt-4 rounded-xl overflow-hidden border border-white/10 max-h-96 relative group/img">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={post.image_url} alt="Post attachment" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
-                <span className="bg-white/20 px-4 py-2 rounded-full font-medium text-sm border border-white/20">View Full Image</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-sm font-bold text-slate-800">
+              {post.is_admin_post ? "Admin" : "Anonymous"}
+            </span>
+            {badge && (
+              <span className={cn("px-1.5 py-0.5 rounded-md text-[10px] font-bold border", badge.cls)}>
+                {badge.label}
+              </span>
+            )}
+            <span className="text-xs text-slate-400">·</span>
+            <span className="text-xs text-slate-400">
+              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+            </span>
+          </div>
+        </div>
+
+        {/* Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all touch-target flex items-center justify-center"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+              <div className="absolute right-0 top-8 z-20 bg-white border border-slate-200 rounded-xl shadow-lg py-1 min-w-[130px]">
+                <button
+                  onClick={handleReport}
+                  disabled={reporting}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <AlertTriangle className="w-4 h-4" /> Report
+                </button>
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(post.id)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
-            </div>
+            </>
           )}
         </div>
+      </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-white/5 pt-3 mt-2">
-          <div className="flex items-center gap-6">
-            <button 
-              onClick={handleUpvote}
-              className={cn(
-                "flex items-center gap-2 transition-colors group/btn",
-                hasUpvoted ? "text-primary" : "text-muted-foreground hover:text-white"
-              )}
-            >
-              <div className={cn(
-                "p-1.5 rounded-full transition-all duration-300",
-                hasUpvoted ? "bg-primary/20" : "group-hover/btn:bg-white/10"
-              )}>
-                <Heart className={cn("w-5 h-5 transition-transform duration-300", hasUpvoted ? "fill-primary scale-110" : "")} />
-              </div>
-              <span className="font-medium text-sm">{upvotes}</span>
-            </button>
+      {/* Content */}
+      <div className="pl-12">
+        <p className="text-sm md:text-[15px] leading-relaxed text-slate-700 whitespace-pre-line">
+          {post.content}
+        </p>
 
-            <button className="flex items-center gap-2 text-muted-foreground hover:text-white transition-colors group/btn">
-              <div className="p-1.5 rounded-full transition-all duration-300 group-hover/btn:bg-white/10">
-                <MessageSquare className="w-5 h-5" />
-              </div>
-              <span className="font-medium text-sm">{post.comment_count}</span>
-            </button>
+        {/* Image */}
+        {post.image_url && (
+          <div className="mt-3 rounded-xl overflow-hidden border border-slate-200 max-h-80">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={post.image_url}
+              alt="Post image"
+              className="w-full h-full object-cover"
+              loading="lazy"
+            />
           </div>
+        )}
 
-          <button className="p-2 text-muted-foreground hover:text-white hover:bg-white/10 rounded-full transition-colors">
-            <Share2 className="w-5 h-5" />
+        {/* Actions */}
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
+          {/* Upvote */}
+          <button
+            onClick={() => handleVote(1)}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-semibold rounded-lg px-2.5 py-1.5 transition-all duration-150 touch-target",
+              voted === 1
+                ? "text-emerald-700 bg-emerald-50"
+                : "text-slate-500 hover:text-emerald-700 hover:bg-emerald-50"
+            )}
+          >
+            <ArrowUp className={cn("w-4 h-4", voted === 1 ? "fill-current" : "")} />
+            <span>{upvotes}</span>
+          </button>
+
+          {/* Downvote */}
+          <button
+            onClick={() => handleVote(-1)}
+            className={cn(
+              "flex items-center gap-1.5 text-sm font-semibold rounded-lg px-2 py-1.5 transition-all duration-150 touch-target",
+              voted === -1
+                ? "text-red-600 bg-red-50"
+                : "text-slate-400 hover:text-red-600 hover:bg-red-50"
+            )}
+          >
+            <ArrowDown className={cn("w-4 h-4", voted === -1 ? "fill-current" : "")} />
+            <span>{downvotes}</span>
+          </button>
+
+          {/* Comments */}
+          <button className="flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg px-2 py-1.5 transition-all duration-150 touch-target">
+            <MessageSquare className="w-4 h-4" />
+            <span>{post.comment_count}</span>
+          </button>
+
+          {/* Share */}
+          <button
+            onClick={handleShare}
+            className="ml-auto flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg p-1.5 transition-all duration-150 touch-target"
+          >
+            <Share2 className="w-4 h-4" />
           </button>
         </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }

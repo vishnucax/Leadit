@@ -3,112 +3,111 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ShieldCheck, Lock, Mail, Loader2 } from "lucide-react";
+import { ShieldCheck, Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) { toast.error("Please fill all fields"); return; }
     setLoading(true);
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-
-      toast.success("Login successful!");
+      toast.success("Welcome back!");
       router.push("/admin");
-    } catch (error: any) {
-      toast.error(error.message || "Invalid credentials");
+    } catch (err: any) {
+      toast.error(err.message || "Invalid credentials");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl" />
       </div>
 
-      <Card className="w-full max-w-md bg-black/20 border-white/10 backdrop-blur-2xl relative z-10">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+      <div className="w-full max-w-sm relative">
+        {/* Card */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/80 p-8">
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/25 mb-4">
               <ShieldCheck className="w-7 h-7 text-white" />
             </div>
+            <h1 className="text-2xl font-extrabold text-slate-900">Admin Login</h1>
+            <p className="text-sm text-slate-400 mt-1">Leadit Moderation Panel</p>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Admin Login</CardTitle>
-          <CardDescription>Enter your credentials to access the moderation panel</CardDescription>
-        </CardHeader>
-        <CardContent>
+
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="email"
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
                   type="email"
-                  placeholder="admin@leadit.com"
-                  className="pl-10 bg-black/20 border-white/10 focus:ring-primary"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="admin@leadcollege.ac.in"
                   required
+                  className="w-full pl-10 pr-4 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 />
               </div>
             </div>
-            <div className="space-y-2">
+
+            {/* Password */}
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link 
-                  href="/admin/forgot-password" 
-                  className="text-xs text-primary hover:underline font-medium"
-                >
-                  Forgot password?
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Password</label>
+                <Link href="/admin/forgot-password" className="text-xs text-primary hover:underline font-semibold">
+                  Forgot?
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  className="pl-10 bg-black/20 border-white/10 focus:ring-primary"
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type={showPass ? "text" : "password"}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
                   required
+                  className="w-full pl-10 pr-10 py-3 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
-            <Button 
-              type="submit" 
-              className="w-full bg-white text-black hover:bg-gray-200 font-bold h-11"
+
+            <button
+              type="submit"
               disabled={loading}
+              className="w-full btn-primary py-3 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed mt-2"
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                "Sign In"
-              )}
-            </Button>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Sign In to Admin"}
+            </button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+
+        <p className="text-center text-xs text-slate-400 mt-4">
+          <Link href="/" className="hover:text-primary transition-colors">← Back to Leadit</Link>
+        </p>
+      </div>
     </div>
   );
 }

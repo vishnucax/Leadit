@@ -45,76 +45,105 @@
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root, .dark {
-  /* Deep dark sleek background */
-  --background: oklch(0.13 0.02 260); 
-  --foreground: oklch(0.985 0 0);
-  
-  --card: oklch(0.16 0.02 260);
-  --card-foreground: oklch(0.985 0 0);
-  
-  --popover: oklch(0.16 0.02 260);
-  --popover-foreground: oklch(0.985 0 0);
-  
-  /* Premium purple/indigo */
-  --primary: oklch(0.65 0.25 285);
-  --primary-foreground: oklch(0.985 0 0);
-  
-  --secondary: oklch(0.22 0.03 260);
-  --secondary-foreground: oklch(0.985 0 0);
-  
-  --muted: oklch(0.22 0.03 260);
-  --muted-foreground: oklch(0.7 0.02 260);
-  
-  --accent: oklch(0.22 0.03 260);
-  --accent-foreground: oklch(0.985 0 0);
-  
-  --destructive: oklch(0.6 0.2 20);
-  --destructive-foreground: oklch(0.985 0 0);
-  
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.65 0.25 285);
-  
-  --radius: 0.8rem;
+/* ===== LIGHT THEME (Premium Linear/Notion aesthetic) ===== */
+:root {
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.13 0.01 260);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.01 260);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.01 260);
+
+  /* Blue-violet primary — inspired by Linear */
+  --primary: oklch(0.52 0.22 264);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.96 0.005 260);
+  --secondary-foreground: oklch(0.25 0.01 260);
+
+  --muted: oklch(0.96 0.005 260);
+  --muted-foreground: oklch(0.52 0.01 260);
+
+  --accent: oklch(0.94 0.01 264);
+  --accent-foreground: oklch(0.25 0.01 264);
+
+  --destructive: oklch(0.57 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.91 0.005 260);
+  --input: oklch(0.91 0.005 260);
+  --ring: oklch(0.52 0.22 264);
+
+  --radius: 0.75rem;
+
+  /* Sidebar */
+  --sidebar: oklch(0.97 0.003 260);
+  --sidebar-foreground: oklch(0.25 0.01 260);
+  --sidebar-primary: oklch(0.52 0.22 264);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.01 264);
+  --sidebar-accent-foreground: oklch(0.25 0.01 264);
+  --sidebar-border: oklch(0.91 0.005 260);
+  --sidebar-ring: oklch(0.52 0.22 264);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    box-sizing: border-box;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30;
-    background-image: 
-      radial-gradient(circle at 15% 0%, rgba(120, 0, 255, 0.08) 0%, transparent 40%),
-      radial-gradient(circle at 85% 100%, rgba(0, 150, 255, 0.05) 0%, transparent 40%);
-    background-attachment: fixed;
+    @apply bg-background text-foreground antialiased;
+    -webkit-tap-highlight-color: transparent;
     background-color: var(--background);
   }
   html {
     @apply font-sans;
+    /* Smooth scroll */
+    scroll-behavior: smooth;
+  }
+  /* Better focus ring */
+  :focus-visible {
+    @apply outline-2 outline-primary outline-offset-2;
   }
 }
 
-/* Glassmorphism utilities */
+/* ===== UTILITY CLASSES ===== */
 @layer utilities {
-  .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  /* Light card style */
+  .surface-card {
+    @apply bg-white border border-slate-200/80 rounded-2xl shadow-sm;
   }
-  .glass-card {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl shadow-black/20;
+  /* Subtle shadow elevation */
+  .surface-elevated {
+    @apply bg-white border border-slate-200 rounded-2xl shadow-md;
   }
-  .glass-panel {
-    @apply bg-black/40 backdrop-blur-2xl border border-white/5 shadow-2xl;
+  /* Sidebar surface */
+  .surface-sidebar {
+    @apply bg-slate-50/80 border-r border-slate-200;
   }
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
+  /* Hide scrollbar cross-browser */
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  /* Skeleton shimmer */
+  .skeleton {
+    @apply bg-slate-200 rounded-lg animate-pulse;
+  }
+  /* Primary gradient button */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground rounded-full px-5 py-2.5 text-sm font-semibold
+           hover:opacity-90 active:scale-95 transition-all duration-150 shadow-sm;
+  }
+  /* Touch target minimum */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
